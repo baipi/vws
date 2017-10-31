@@ -1,0 +1,7 @@
+{
+  "extends": "airbnb",
+    "rules": {
+      "no-unused-expressions": "off", // avoid error using chai function
+      "prefer-destructuring": "off"
+    } 
+}
