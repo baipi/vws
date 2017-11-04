@@ -8,7 +8,6 @@ const expect = chai.expect;
 const AWS = require('aws-sdk');
 const AWSMock = require('aws-sdk-mock');
 
-process.env.JCDECAUX_KEY = 'YOUR_API_KEY';
 const utils = require('../lib/utils');
 const Velib = require('../lib/velib');
 
@@ -77,6 +76,10 @@ describe('Velib', () => {
     nbBikes: 12204,
     open: 896,
     nbStands: 16692,
+    date: '2017-10-27-10',
+  };
+
+  const oneRowDetailsData = {
     stations: [],
     date: '2017-10-27-10',
   };
@@ -87,7 +90,13 @@ describe('Velib', () => {
     });
 
     AWSMock.mock('DynamoDB.DocumentClient', 'update', (params, callback) => {
-      const item = oneRowData;
+      let item;
+      if (typeof params.ExpressionAttributeNames['#s'] === 'undefined') {
+        item = oneRowData;
+      } else {
+        item = oneRowDetailsData;
+      }
+
       item.timestamp = 1509100108547;
 
       callback(null, { Attributes: item });
@@ -144,6 +153,20 @@ describe('Velib', () => {
     const velib = new Velib(documentClient);
 
     velib.updateRow(oneRowData)
+      .then((res) => {
+        expect(res).to.not.be.empty;
+        expect(res).to.be.an('object');
+        expect(res.timestamp).to.exist;
+        done();
+      })
+      .catch(done);
+  });
+
+  it('should updateDetailsRow row', (done) => {
+    const documentClient = new AWS.DynamoDB.DocumentClient();
+    const velib = new Velib(documentClient);
+
+    velib.updateDetailsRow(oneRowDetailsData)
       .then((res) => {
         expect(res).to.not.be.empty;
         expect(res).to.be.an('object');

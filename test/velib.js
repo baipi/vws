@@ -4,7 +4,7 @@ const expect = mochaPlugin.chai.expect;
 const wrapped = mochaPlugin.getWrapper('velib', '/src/velib/src/index.js', 'handler');
 
 describe('velib', () => {
-  it('implement tests here', () =>
+  it('Test Velib function', () =>
     wrapped.run({}).then((res) => {
       expect(res).to.not.be.empty;
       expect(res.headers).to.not.be.empty;

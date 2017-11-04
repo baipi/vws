@@ -3,6 +3,7 @@ const utils = require('./utils');
 
 // Settings
 const TABLE = process.env.VELIB_TABLE;
+const DETAILS_TABLE = process.env.VELIB_DETAILS_TABLE;
 const JCD_KEY = process.env.JCDECAUX_KEY;
 const JCD_CONTRACT = 'paris';
 const JCD_URL = `https://api.jcdecaux.com/vls/v1/stations?contract=${JCD_CONTRACT}&apiKey=${JCD_KEY}`;
@@ -53,20 +54,13 @@ class Velib {
   }
 
   /**
-   * Update the daily row
+   * Update the daily row for general data
+   *
    * {
    *   timestamp: <number>,
-   *   stations: [{
-   *    id: <string>,
-   *    pos: {
-   *      lat: <number>,
-   *      lng: <number>,
-   *    }
-   *    isOpen: <boolean>,
-   *    nbBikes: <number>,
-   *   }],
    *   open: <number>,
    *   total: <number>,
+   *   nbStands: <number>,
    *   nbBikes: <number>,
    * }
    * @see http://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/DynamoDB/DocumentClient.html#update-property
@@ -78,9 +72,8 @@ class Velib {
     const params = {
       TableName: TABLE,
       Key: { date: row.date },
-      UpdateExpression: 'SET #s = :s, #o = :o, #t = :t, #n = :n, #ns = :ns, #ts = :ts',
+      UpdateExpression: 'SET #o = :o, #t = :t, #n = :n, #ns = :ns, #ts = :ts',
       ExpressionAttributeNames: {
-        '#s': 'stations',
         '#o': 'open',
         '#t': 'total',
         '#n': 'nbBikes',
@@ -88,11 +81,49 @@ class Velib {
         '#ts': 'timestamp',
       },
       ExpressionAttributeValues: {
-        ':s': row.stations,
         ':o': row.open,
         ':t': row.total,
         ':n': row.nbBikes,
         ':ns': row.nbStands,
+        ':ts': Date.now(),
+      },
+      ReturnValues: 'ALL_NEW',
+    };
+
+    return this.db.update(params).promise()
+      .then(data => data.Attributes);
+  }
+
+  /**
+   * Update daily row by Velib stations
+   *
+   * {
+   *   timestamp: <number>,
+   *   stations: [{
+   *    id: <string>,
+   *    pos: {
+   *      lat: <number>,
+   *      lng: <number>,
+   *    }
+   *    isOpen: <boolean>,
+   *    nbBikes: <number>,
+   *    nbStands: <number>,
+   *   }]
+   * }
+   * @param  {[type]}
+   * @return {[type]}
+   */
+  updateDetailsRow(row) {
+    const params = {
+      TableName: DETAILS_TABLE,
+      Key: { date: row.date },
+      UpdateExpression: 'SET #s = :s, #ts = :ts',
+      ExpressionAttributeNames: {
+        '#s': 'stations',
+        '#ts': 'timestamp',
+      },
+      ExpressionAttributeValues: {
+        ':s': row.stations,
         ':ts': Date.now(),
       },
       ReturnValues: 'ALL_NEW',
@@ -118,14 +149,18 @@ class Velib {
           return Promise.reject(new Error('JCDecaux API doesn\'t work'));
         }
 
-        // Row to inser
+        // Rows to insert
         const dayRow = {
           date: utils.UTCdateKey(), // Date UTC
-          stations: [], // Stations list
           open: 0, // Number of opened stations
           total: 0,
           nbBikes: 0,
           nbStands: 0,
+        };
+
+        const detailsRow = {
+          date: utils.UTCdateKey(), // Date UTC
+          stations: [], // Stations list
         };
 
         // For each station from JCDECEAUX API
@@ -151,11 +186,17 @@ class Velib {
             dayRow.nbStands += s.available_bike_stands;
           }
 
-          dayRow.stations.push(station);
+          detailsRow.stations.push(station);
         }
 
         // Update or create if not exist
-        return this.updateRow(dayRow);
+        return Promise.all([this.updateRow(dayRow), this.updateDetailsRow(detailsRow)])
+          .then((res) => {
+            const day = res[0];
+            day.stations = res[1].stations;
+
+            return day;
+          });
       });
   }
 }

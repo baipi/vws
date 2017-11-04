@@ -21,12 +21,14 @@ Then, go in repository and run:
 $  npm install
 ````
 
-Configure parameters in `serverless.yml` (profile and API key):
+Configure parameters in `serverless.yml` and `config/secret.yml` (profile and API key):
 ```yaml
 provider:
-  # profile: <PROFILE_NAME> # Uncomment if you want to use a specific profile
-  environment:
-    JCDECAUX_KEY: <YOUR_API_KEY>
+  # profile: <PROFILE_NAME> # Uncomment if you want to use a specific profile    
+```
+
+```
+JCDECAUX_KEY: <YOUR_API_KEY>
 ```
 
 ## Deployment
@@ -55,6 +57,11 @@ $  sls offline start
 ```
 
 ## Test
+Export your API Key:
+```
+export JCDECAUX_KEY=<YOUR_API_KEY>
+```
+
 Run online test:
 ```
 npm run test
@@ -80,7 +87,6 @@ npm run test
 
 ## TO DO
 * Increase tests
-* Separate table for details (to limit reading cost on DynamoDB)
 
 ## Related
 * [VWS article]() (french)
