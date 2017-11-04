@@ -54,6 +54,24 @@ class Velib {
   }
 
   /**
+   * Get all stations at a given date/hour
+   *
+   * @param  {string} Date format YYYY-MM-DD-HH
+   * @return {any} Object containing stations
+   */
+  getAllStations(key) {
+    const params = {
+      TableName: DETAILS_TABLE,
+      Key: {
+        date: key,
+      },
+    };
+
+    return this.db.get(params).promise()
+      .then(data => data.Item);
+  }
+
+  /**
    * Update the daily row for general data
    *
    * {
@@ -173,7 +191,7 @@ class Velib {
           };
 
           if (s.status === 'CLOSED') { // Is station closed or opened
-            station.isClose = true;
+            station.isClosed = true;
           } else {
             // Data on station
             station.isClosed = false;

@@ -101,6 +101,14 @@ describe('Velib', () => {
 
       callback(null, { Attributes: item });
     });
+
+    AWSMock.mock('DynamoDB.DocumentClient', 'get', (params, callback) => {
+      const item = oneRowDetailsData;
+
+      item.timestamp = 1509100108547;
+
+      callback(null, { Item: item });
+    });
   });
 
   afterEach(() => {
@@ -143,6 +151,20 @@ describe('Velib', () => {
         expect(res).to.not.be.empty;
         expect(res).to.be.a('array');
         expect(res.length).to.deep.equal(allRowData.length * 2);
+        done();
+      })
+      .catch(done);
+  });
+
+  it('should get all stations', (done) => {
+    const documentClient = new AWS.DynamoDB.DocumentClient();
+    const velib = new Velib(documentClient);
+
+    velib.getAllStations('2017-10-27-10')
+      .then((res) => {
+        expect(res).to.not.be.empty;
+        expect(res.stations).to.be.a('array');
+        expect(res.stations).to.deep.equal(oneRowDetailsData.stations);
         done();
       })
       .catch(done);
