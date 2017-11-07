@@ -9,7 +9,7 @@
     "lint": "./node_modules/eslint/bin/eslint.js lib/*.js src/*.js"
   },
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "aws-sdk": "^2.140.0",
     "axios": "^0.17.0"

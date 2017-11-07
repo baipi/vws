@@ -84,6 +84,11 @@ describe('Velib', () => {
     date: '2017-10-27-10',
   };
 
+  const oneRowGobeeDetailsData = {
+    bikes: [],
+    date: '2017-10-27-10',
+  };
+
   beforeEach(() => {
     AWSMock.mock('DynamoDB.DocumentClient', 'scan', (params, callback) => {
       callback(null, { Items: allRowData });
@@ -91,10 +96,12 @@ describe('Velib', () => {
 
     AWSMock.mock('DynamoDB.DocumentClient', 'update', (params, callback) => {
       let item;
-      if (typeof params.ExpressionAttributeNames['#s'] === 'undefined') {
-        item = oneRowData;
-      } else {
+      if (typeof params.ExpressionAttributeNames['#b'] !== 'undefined') {
+        item = oneRowGobeeDetailsData;
+      } else if (typeof params.ExpressionAttributeNames['#s'] !== 'undefined') {
         item = oneRowDetailsData;
+      } else {
+        item = oneRowData;
       }
 
       item.timestamp = 1509100108547;
@@ -207,8 +214,38 @@ describe('Velib', () => {
         expect(res).to.not.be.empty;
         expect(res).to.be.an('object');
         expect(res.timestamp).to.exist;
+        expect(res.stations).to.exist;
         done();
       })
       .catch(done);
   });
+
+  it('should updateGobeeDetailsRow row', (done) => {
+    const documentClient = new AWS.DynamoDB.DocumentClient();
+    const velib = new Velib(documentClient);
+
+    velib.updateGobeeDetailsRow(oneRowDetailsData)
+      .then((res) => {
+        expect(res).to.not.be.empty;
+        expect(res).to.be.an('object');
+        expect(res.timestamp).to.exist;
+        done();
+      })
+      .catch(done);
+  });
+
+  it('should get Gobee Bikes in Paris', (done) => {
+    const documentClient = new AWS.DynamoDB.DocumentClient();
+    const velib = new Velib(documentClient);
+
+    velib.gobeeParis()
+      .then((res) => {
+        expect(res).to.not.be.empty;
+        expect(res).to.be.an('object');
+        expect(res.timestamp).to.exist;
+        expect(res.bikes).to.exist;
+        done();
+      })
+      .catch(done);
+  }).timeout(5000);
 });

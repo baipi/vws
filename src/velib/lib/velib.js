@@ -4,9 +4,11 @@ const utils = require('./utils');
 // Settings
 const TABLE = process.env.VELIB_TABLE;
 const DETAILS_TABLE = process.env.VELIB_DETAILS_TABLE;
+const G_DETAILS_TABLE = process.env.GOBEE_DETAILS_TABLE;
 const JCD_KEY = process.env.JCDECAUX_KEY;
 const JCD_CONTRACT = 'paris';
 const JCD_URL = `https://api.jcdecaux.com/vls/v1/stations?contract=${JCD_CONTRACT}&apiKey=${JCD_KEY}`;
+const GOBEE_URL = 'http://aws.gobee.bike/GobeeBike/bikes/near_bikes?';
 
 
 class Velib {
@@ -171,7 +173,7 @@ class Velib {
         const dayRow = {
           date: utils.UTCdateKey(), // Date UTC
           open: 0, // Number of opened stations
-          total: 0,
+          total: 0, // according to http://www.parisavelo.net/stats.php
           nbBikes: 0,
           nbStands: 0,
         };
@@ -215,6 +217,120 @@ class Velib {
 
             return day;
           });
+      });
+  }
+
+
+  /**
+   * Update hourly row for Gobee bikes
+   *
+   * {
+   *    bikes: [{
+   *      id: <string>,
+   *      pos: {
+   *        lat: <number>,
+   *        lng: <number>,
+   *      },
+   *      type: <string>,
+   *    }, ...],
+   *    city: <string>,
+   *    date: <string>,
+   *    timestamp: <number>,
+   * }
+   *
+   * @param  {any} Row to insert/update
+   * @return {any} Inseretd row
+   */
+  updateGobeeDetailsRow(row) {
+    const params = {
+      TableName: G_DETAILS_TABLE,
+      Key: { date: row.date },
+      UpdateExpression: 'SET #b = :b, #ts = :ts, #c = :c',
+      ExpressionAttributeNames: {
+        '#b': 'bikes',
+        '#c': 'city',
+        '#ts': 'timestamp',
+      },
+      ExpressionAttributeValues: {
+        ':b': row.bikes,
+        ':c': row.city,
+        ':ts': Date.now(),
+      },
+      ReturnValues: 'ALL_NEW',
+    };
+
+    return this.db.update(params).promise()
+      .then(data => data.Attributes);
+  }
+
+
+  /**
+   * Get Gobee bikes in Paris
+   *
+   * {
+   *    bikes: [{
+   *      id: <string>,
+   *      pos: {
+   *        lat: <number>,
+   *        lng: <number>,
+   *      },
+   *      type: <string>,
+   *    }, ...],
+   *    city: <string>,
+   *    date: <string>,
+   *    timestamp: <number>,
+   * }
+   *
+   * @return {Any} A Gobee bikes array
+   */
+  gobeeParis() {
+    const bbox = [[48.80, 2.24], [48.90, 2.43]]; // Paris bounding box
+    const step = 0.01; // Mooving 0.01 decimal degree each request
+
+    const urls = []; // Urls to execute
+    const bikes = {}; // Bikes list. Bike ID is used as a key to avoid double value
+
+    // Generate requests for Paris area
+    for (let lat = bbox[0][0]; lat < bbox[1][0]; lat += step) {
+      for (let lng = bbox[0][1]; lng < bbox[1][1]; lng += step) {
+        urls.push(axios.get(GOBEE_URL.concat(`lat=${lat}&lng=${lng}`))
+          .catch(() => { // Workaround to avoid axios.all failing in case of loading error on 1 url
+            console.log('ERROR: '.concat(GOBEE_URL, `lat=${lat}&lng=${lng}`));
+            return Promise.resolve();
+          }));
+      }
+    }
+
+    // Execute all requests for Paris area
+    return axios.all(urls)
+      .then((res) => {
+        for (let i = 0; i < res.length; i += 1) {
+          // Ensure the request have data (no error)
+          if (res[i] && res[i].data && res[i].data.data && res[i].data.data.bikes) {
+            const request = res[i].data.data.bikes; // Get bikes
+
+            for (let b = 0; b < request.length; b += 1) {
+              const bike = request[b];
+
+              bikes[bike.bid] = { // Format data
+                id: bike.bid,
+                type: 'gobee',
+                pos: {
+                  lat: Math.floor(bike.gLat * 1000) / 1000, // Round to reduce JSON size
+                  lng: Math.floor(bike.gLng * 1000) / 1000,
+                },
+              };
+            }
+          }
+        }
+
+        const row = {
+          bikes: Object.keys(bikes).map(k => bikes[k]),
+          date: utils.UTCdateKey(), // Date UTC
+          city: 'paris',
+        };
+
+        return (this.updateGobeeDetailsRow(row));
       });
   }
 }

@@ -1,6 +1,6 @@
 # Velib' Web Services (VWS) - API
 
-This Serverless project is about creating an API to get Velib' (Paris sharing bike service) history.
+This Serverless project is about creating an API to get Velib' and Gobee (Paris sharing bike service) history.
 
 JC Decaux Velib' will disappear by the middle of 2018 and replace by Smoveongo Velib'. Thanks to this API, we will be able to see the decrease in the number of available bikes and stations.
 Lambda function executed every hour and at call, will get and compute Velib' data from JC Decaux API and record them on a database.
@@ -87,6 +87,8 @@ npm run test
 
 ## TO DO
 * Increase tests
+* Gobee and Velib could be split in several files/folders
+* Support more cities
 
 ## Related
 * [VWS article]() (french)

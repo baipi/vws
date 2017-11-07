@@ -8,7 +8,7 @@
     "lint-test": "./node_modules/eslint/bin/eslint.js --env mocha test/*.js"
   },
   "author": "pierre.bails@gmail.com",
-  "license": "ISC",
+  "license": "MIT",
   "devDependencies": {
     "serverless-mocha-plugin": "^1.7.0",
     "serverless-dynamodb-local": "^0.2.26",
