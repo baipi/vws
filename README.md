@@ -7,7 +7,7 @@ Lambda function executed every hour and at call, will get and compute Velib' dat
 
 This app deploys a Lambda function, a DynamoDB table and an API Gateway route as to access data.
 
-[Watch demo](http://vws.com.s3-website-us-east-1.amazonaws.com/)
+[Watch demo](https://d3597qzh3qe8nc.cloudfront.net/)
 
 ## Requirements
 * [An AWS account](http://docs.aws.amazon.com/AmazonSimpleDB/latest/DeveloperGuide/AboutAWSAccounts.html)
